@@ -67,6 +67,8 @@ func (s *Server) Handler() http.Handler {
 	root.Handle("/aggregates", s.auth(s.mux))
 	root.Handle("/aggregates/", s.auth(s.mux))
 	root.Handle("/deliveries/", s.auth(s.mux))
+	root.Handle("/phenology/", s.auth(s.mux))
+	root.Handle("/phenology", s.auth(s.mux))
 	root.Handle("/dr", s.auth(s.mux))
 	root.Handle("/dr/", s.auth(s.mux))
 	root.Handle("/audit", s.auth(s.mux))
@@ -83,6 +85,9 @@ func (s *Server) routes() {
 	m.HandleFunc("/regions/{region}/operations", s.handleOperations)
 	m.HandleFunc("/regions/{region}/ingest", s.handleIngest)
 	m.HandleFunc("/regions/{region}/journal/verify", s.handleVerifyJournal)
+	m.HandleFunc("/regions/{region}/phenology/evidence", s.handlePhenologyEvidence)
+	m.HandleFunc("/regions/{region}/phenology/runs", s.handlePhenologyRuns)
+	m.HandleFunc("/regions/{region}/phenology/runs/{run}", s.handlePhenologyRun)
 
 	// Replication control plane.
 	m.HandleFunc("/replication/links", s.handleLinks)
@@ -104,6 +109,13 @@ func (s *Server) routes() {
 	m.HandleFunc("/aggregates/{id}/deliver", s.handleDeliver)
 	m.HandleFunc("/deliveries/{id}", s.handleDelivery)
 	m.HandleFunc("/deliveries/{id}/verify", s.handleVerifyDelivery)
+
+	// Phenology stage alignment (group plane).
+	m.HandleFunc("/phenology/comparisons", s.handlePhenologyComparisons)
+	m.HandleFunc("/phenology/comparisons/{id}", s.handlePhenologyComparison)
+	m.HandleFunc("/phenology/comparisons/{id}/deliver", s.handlePhenologyDeliver)
+	m.HandleFunc("/phenology/deliveries/{id}", s.handlePhenologyDelivery)
+	m.HandleFunc("/phenology/deliveries/{id}/verify", s.handlePhenologyVerifyDelivery)
 
 	// DR register.
 	m.HandleFunc("/dr", s.handleDRList)

@@ -232,6 +232,10 @@ func (s *Service) applyReplicas(ctx context.Context, region string, events []out
 			if err := applyMetric(ctx, tx, region, e); err != nil {
 				return 0, err
 			}
+		case "phenology_stage":
+			if err := applyPhenologyProduct(ctx, tx, region, e); err != nil {
+				return 0, err
+			}
 		default:
 			return 0, fmt.Errorf("unknown outbox category %q", e.Cat)
 		}
@@ -352,6 +356,31 @@ func applyMetric(ctx context.Context, tx pgx.Tx, region string, e outboxEvent) e
 	return err
 }
 
+// applyPhenologyProduct stores a region-granularity stage product. The payload
+// carries area by stage, pending ranges and evidence windows only; plot
+// identifiers and coordinates are never present.
+func applyPhenologyProduct(ctx context.Context, tx pgx.Tx, region string, e outboxEvent) error {
+	var p struct {
+		RunID    string    `json:"run_id"`
+		RuleID   string    `json:"rule_id"`
+		Method   string    `json:"method"`
+		AsOfDate string    `json:"as_of_date"`
+	}
+	if err := json.Unmarshal(e.Payload, &p); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `
+		insert into replica_phenology_products (source_region, entity_id, source_seq, source_epoch,
+			run_id, rule_id, method, as_of_date, product, source_node, status, copied_at)
+		values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'unconfirmed',now())
+		on conflict (source_region, entity_id) do update
+		  set source_seq=excluded.source_seq, source_epoch=excluded.source_epoch, run_id=excluded.run_id,
+		      rule_id=excluded.rule_id, method=excluded.method, as_of_date=excluded.as_of_date,
+		      product=excluded.product, source_node=excluded.source_node, copied_at=excluded.copied_at`,
+		region, e.ID, e.Seq, e.Epoch, p.RunID, p.RuleID, p.Method, p.AsOfDate, e.Payload, e.Node)
+	return err
+}
+
 // discardUncopied removes replica rows written past the region's confirmed
 // position by a failed attempt. Nothing above the confirmed seq was visible to
 // the group, so deleting it restores exactly the last confirmed view.
@@ -371,7 +400,7 @@ func (s *Service) discardUncopied(ctx context.Context, region string, upto int64
 		return 0, tx.Commit(ctx)
 	}
 	total := 0
-	for _, table := range []string{"replica_op_summaries", "replica_trajectories", "replica_alarms", "replica_metrics"} {
+	for _, table := range []string{"replica_op_summaries", "replica_trajectories", "replica_alarms", "replica_metrics", "replica_phenology_products"} {
 		var n int
 		if err := tx.QueryRow(ctx, fmt.Sprintf(
 			`with del as (delete from %s where source_region=$1 and status='unconfirmed' and source_seq>$2 returning 1)
@@ -412,6 +441,7 @@ func (s *Service) confirmReplicas(ctx context.Context, region string, toSeq int6
 		`update replica_trajectories set status='confirmed' where source_region=$1 and source_seq<=$2`,
 		`update replica_alarms set status='confirmed' where source_region=$1 and source_seq<=$2`,
 		`update replica_metrics set status='confirmed' where source_region=$1 and source_seq<=$2`,
+		`update replica_phenology_products set status='confirmed' where source_region=$1 and source_seq<=$2`,
 	} {
 		if _, err := tx.Exec(ctx, q, region, toSeq); err != nil {
 			return 0, err

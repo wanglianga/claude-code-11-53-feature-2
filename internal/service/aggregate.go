@@ -354,13 +354,14 @@ type ReplicaStats struct {
 	Trajectories map[string]int `json:"raw_trajectories_by_region"`
 	Alarms       map[string]int `json:"device_alarms_by_region"`
 	Metrics      map[string]int `json:"aggregate_metrics_by_region"`
+	Phenology    map[string]int `json:"phenology_products_by_region"`
 	Unconfirmed  map[string]int `json:"unconfirmed_by_region"`
 }
 
 func (s *Service) ReplicaStats(ctx context.Context) (ReplicaStats, error) {
 	out := ReplicaStats{
 		Summaries: map[string]int{}, Trajectories: map[string]int{}, Alarms: map[string]int{},
-		Metrics: map[string]int{}, Unconfirmed: map[string]int{},
+		Metrics: map[string]int{}, Phenology: map[string]int{}, Unconfirmed: map[string]int{},
 	}
 	queries := []struct {
 		q  string
@@ -370,10 +371,12 @@ func (s *Service) ReplicaStats(ctx context.Context) (ReplicaStats, error) {
 		{`select source_region, count(*) from replica_trajectories group by 1`, out.Trajectories},
 		{`select source_region, count(*) from replica_alarms group by 1`, out.Alarms},
 		{`select source_region, count(*) from replica_metrics group by 1`, out.Metrics},
+		{`select source_region, count(*) from replica_phenology_products group by 1`, out.Phenology},
 		{`select source_region, count(*) from (
 		   select source_region from replica_op_summaries where status='unconfirmed'
 		   union all select source_region from replica_trajectories where status='unconfirmed'
-		   union all select source_region from replica_metrics where status='unconfirmed') x group by 1`, out.Unconfirmed},
+		   union all select source_region from replica_metrics where status='unconfirmed'
+		   union all select source_region from replica_phenology_products where status='unconfirmed') x group by 1`, out.Unconfirmed},
 	}
 	for _, q := range queries {
 		rows, err := s.db.Control().Query(ctx, q.q)

@@ -69,3 +69,48 @@ get /dr/US-IA "$A" | jq -c '.registry|{active_node,standby_node,epoch,last_confi
 post /dr/US-IA/failover "$A" '{"reconcile":true}' | jq -c '{from_node,to_node,epoch,confirmed_seq,discarded_unconfirmed_rows,resumed_from_seq}'
 get /regions/US-IA/status "Authorization: Bearer demo-operator-us-ia" | jq -c '{active_node,epoch,journal_head,journal_entries,handover_ready}'
 post /dr/US-IA/failback "$A" '{}' | jq -c '{from_node,to_node,epoch}'
+
+hr "phenology: upload season evidence and derive stages in-region (DAS + GDD)"
+PH="$S/phenology"
+for r in de-bb us-ia br-mt fr-nor; do
+  code=$(echo "$r" | tr 'a-z' 'A-Z')
+  post "/regions/$code/phenology/evidence" "Authorization: Bearer demo-operator-$r" "@$PH/$r/evidence.json" \
+    | jq -c '{region,rule_id,counts}'
+done
+# DE-BB (cool) and US-IA (warm) at 30 days after sowing: same DAS, different GDD.
+for spec in "DE-BB de-bb das 2026-05-10" "DE-BB de-bb gdd 2026-05-10" "US-IA us-ia das 2026-05-15" "US-IA us-ia gdd 2026-05-15"; do
+  set -- $spec
+  post "/regions/$1/phenology/runs" "Authorization: Bearer demo-operator-$2" \
+    "{\"rule_id\":\"S2026-MAIZE-v1\",\"method\":\"$3\",\"as_of_date\":\"$4\"}" \
+    | jq -c '{region_code,method,as_of_date,stages:.summary.stage_areas,pending:.summary.pending_area_ha}'
+done
+for spec in "DE-BB de-bb 2026-05-20" "US-IA us-ia 2026-05-20" "FR-NOR fr-nor 2026-05-20" "BR-MT br-mt 2026-11-05"; do
+  set -- $spec
+  post "/regions/$1/phenology/runs" "Authorization: Bearer demo-operator-$2" \
+    "{\"rule_id\":\"S2026-MAIZE-v1\",\"method\":\"das\",\"as_of_date\":\"$3\"}" >/dev/null
+done
+
+hr "phenology: late correction issues a NEW run; the old run keeps its evidence"
+OLD=$(post /regions/DE-BB/phenology/runs "Authorization: Bearer demo-operator-de-bb" \
+  '{"rule_id":"S2026-MAIZE-v1","method":"das","as_of_date":"2026-05-20"}' | jq -r .run_id)
+post /regions/DE-BB/phenology/evidence "Authorization: Bearer demo-operator-de-bb" "@$PH/de-bb/correction-v2.json" >/dev/null
+post /regions/DE-BB/phenology/runs "Authorization: Bearer demo-operator-de-bb" \
+  '{"rule_id":"S2026-MAIZE-v1","method":"das","as_of_date":"2026-05-20"}' >/dev/null
+get "/regions/DE-BB/phenology/runs/$OLD" "Authorization: Bearer demo-operator-de-bb" \
+  | jq -c '{run_id,evidence_fingerprint,stages:.summary.stage_areas}'
+
+hr "phenology: replicate region-granularity stage products, align across hemispheres"
+post /replication/batch "$A" '{}' >/dev/null
+APRPH=$(post /outbound/requests "$AN" "@$PH/approvals/phenology-wide.json" | jq -r .id)
+post "/outbound/requests/$APRPH/decide" "$AP" '{"decision":"approved"}' >/dev/null
+CMP=$(post /phenology/comparisons "$AN" "$(jq -n --arg a "$APRPH" '{approval_id:$a,rule_id:"S2026-MAIZE-v1",
+  method:"das",as_of_date:"2026-05-20",region_as_of:{"BR-MT":"2026-11-05"},
+  stage_keys:["emergence","vegetative","harvest_prep"]}')")
+echo "$CMP" | jq -c '{included:.included_regions,excluded:.excluded_regions,common:.common_stage,
+  comparable:.common_comparable_regions,stage_totals,pending_totals}'
+CID=$(echo "$CMP" | jq -r .id)
+DLV=$(post "/phenology/comparisons/$CID/deliver" "$AN")
+echo "$DLV" | jq -c '{status,sha:.artifact_sha256,coords:.artifact.contains_raw_trajectories,
+  pending:.artifact.pending_totals,checks:[.checks[]|select(.passed==false)|.name]}'
+DID=$(echo "$DLV" | jq -r .id)
+get "/phenology/deliveries/$DID/verify" "$AU" | jq -c .

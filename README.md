@@ -20,7 +20,7 @@
 
 一次上传在**一个本地事务**里完成：作业记录 + 本地日志（gapless 序列）+ 事务性 outbox + 回执。
 
-- outbox 按类别拆事件：`operation_summary`、`raw_trajectory`、`device_alarm`、`aggregate_metric`；
+- outbox 按类别拆事件：`operation_summary`、`raw_trajectory`、`device_alarm`、`aggregate_metric`、`phenology_stage`；
 - 复制按 `residency_policies(region, category, outbound_allowed)` 逐事件过滤，受限轨迹**连控制面都进不去**；
 - 副本先落 `unconfirmed`，接收方确认后才变 `confirmed` 并对集团可见，同时推进 DR 登记册的
   `last_confirmed_seq` 与复制游标 `confirmed_seq`；
@@ -60,11 +60,34 @@
 - 同一聚合运行不能二次交付（`aggregate_run` 已达 `delivered` 时返回 `409`）。
 
 ### 1.7 审计链可证明"某份跨境报表从未包含受限原始轨迹"
-
 - 出境文件按**原始字节**存 `text`（不是 `jsonb`，避免键重排/数字归一化破坏哈希），交付时记录 SHA-256；
 - `GET /deliveries/{id}/verify` 重新计算哈希、扫描受限字段、校验对应审计条目与整条哈希链；
 - 审计账本为哈希链（`prev_hash` + 规范化 payload），落库前对 `detail` 做 JSON 归一化、时间截断到微秒，
   保证"写入时哈希 == 读回后重算哈希"；任何越权改库都会被 `GET /audit/verify` 定位到具体行号。
+
+### 1.8 作物生育阶段对齐（跨半球按共同阶段比较）
+
+"第 18 周"在北半球与南半球并不处于同一生育阶段。系统新增**阶段对齐数据产品**：区域内保存作物、品种、
+播种事实、阶段日历、温度观测及其覆盖；按同一季节规则版本推导阶段；集团只取得**区域粒度**的已播面积、
+各阶段面积、待定面积和阶段证据范围——**不含田块标识或轨迹**。
+
+- **同一季节规则版本绑定**：`rule_id`（含 `season_id` / `rule_version`）贯穿播种事实、品种目录、气象/日历证据、
+  阶段推导、区域聚合与集团比较。混合季节规则的比较会被拒绝或列为 `mixed_season_rule`。
+- **两条透明路线**，都由区域在本地计算：
+  - `das`：已确认播种日 + 品种声明的**播后天数阈值**（无声明时回退到农艺部门发布的阶段日历）。规则透明，
+    对没有连续气象资料的区域可用；
+  - `gdd`：区域内温度站观测累计**生长度日**（基温 + 品种阈值）。更贴近实际物候，但要求温度站覆盖与基温/品种
+    参数可信；缺样会得到**有界**的上界估计，并据此**扩大**证据范围。
+- **不确定即待定，强行归类被禁止**：品种不明（`variety_unknown`）、补种或同地块多作物（`multi_crop_plot`）、
+  温度站距离/高度不适用（`station_distance_or_height_not_applicable`）、缺站链接、缺气象、缺 GDD 参数、
+  阶段证据互相矛盾（`stage_evidence_conflict`）、或缺样使阶段跨越的扩大范围超过阈值（`weather_gap_widens_stage`）
+  时，面积列入 `pending`，绝不并入阶段面积。同一地块的补种按**分段**处理（`segments` 记录每个播次）。
+- **不可变运行**：每次推导签发一个 `phenology_run`，记录其所读播种事实/气象观测的 `evidence_fingerprint`。
+  迟到播种或气象修订只产生**新运行**，历史运行的阶段与证据范围原样保留。
+- **集团比较只报告农艺进度**：`/phenology/comparisons` 只用已确认的区域阶段产品，输出共同阶段
+  （`common_stage`）与**共同可比区域**（`common_comparable_regions`），并带明确声明：
+  阶段对齐是农艺进度口径，**不评价团队绩效、不预测产量**。`region_as_of` 允许各区域按本地等价日期对齐
+  （例如南半球 10 月播种 vs 北半球 4 月播种），而不是把公历周直接并列。
 
 ---
 
@@ -104,7 +127,7 @@ REPLICATION_INTERVAL=5s go run ./cmd/server
 ### 2.3 一键验证
 
 ```bash
-make verify            # go build + vet + 单元测试 + 起临时服务 + 105 项验收断言
+make verify            # go build + vet + 单元测试 + 起临时服务 + 146 项验收断言
 # 或对已运行实例：
 ./scripts/replay.sh http://localhost:8080
 ```
@@ -147,8 +170,11 @@ Swagger UI 中点击 **Authorize** 填入上述任一 token 即可调用。
 | `dr/us-ia-post-switch.json` | 主备切换后在新主节点继续上传 |
 | `approvals/wide.json` | 四区域 × 全指标的出境申请 |
 | `approvals/narrow.json` | 三区域（DE-BB/BR-MT/US-IA）× 3 指标的窄范围申请 |
+| `phenology/{de-bb,us-ia,br-mt,fr-nor}/evidence.json` | 每区域阶段证据：季节规则、品种（日数阈值 + GDD 参数）、地块、播种事实、阶段日历、温度站/链接、温度观测 |
+| `phenology/de-bb/correction-v2.json` | 迟到更正：某地块播种日更高 revision + 一条气象观测修订（只影响**新**运行） |
+| `phenology/approvals/phenology-wide.json` | 四区域、授权 `area_ha` 的阶段比较出境申请 |
 
-重新生成：`python3 scripts/gen_samples.py`。
+重新生成：`python3 scripts/gen_samples.py && python3 scripts/gen_phenology_samples.py`（或 `make samples`）。
 
 ---
 
@@ -163,12 +189,13 @@ Swagger UI 中点击 **Authorize** 填入上述任一 token 即可调用。
 | 主备切换 | 注入确认失败→存在 4 行 `unconfirmed`；failover 丢弃这 4 行、`resumed_from_seq == DR last_confirmed_seq`、新主 `epoch=2`、本地日志仍 `gapless`、续传后面积无重复；另注入一行崩溃写入者的孤儿副本，切换后同样被清除且计入报告 |
 | 审批撤回 | 撤回后交付 `status=blocked`、`artifact=null`、无 `artifact_sha256`、原因为 `approval_status`；窄范围申请越权指标在聚合阶段 `403` |
 | 出境审计 | 存储字节重算哈希一致、`restricted_fields` 为空、审计条目与整链校验通过；**越权改库后** `audit/verify` 返回 `valid=false` 且 `broken_at` 指向被改行 |
+| 阶段对齐 | 同一 30 播后天数下，凉爽 DE-BB 按 GDD 仅到出苗、温暖 US-IA 到营养生长（`vegetative=130`），而 `das` 路线两者一致；补种地块 `segmented_plots=1`、`reseeded_area_ha=100`；BR-MT 缺样 → `weather_gap_widens_stage` 待定且证据范围变宽、`weather_coverage<0.7`；US-IA 站距 95km/高差 260m → 站不适用待定；FR-NOR 无日数阈值 → `calendar_used=true`、田块观测与推导矛盾 → `stage_evidence_conflict` 待定；迟到更正产生**新运行且指纹不同**、旧运行指纹不变；气象修订使下一 GDD 运行指纹变化而历史 GDD 运行不变；集团比较四区对齐、`common_stage=emergence`、交付无坐标、补种/多作物面积计入 `pending_totals`；审批撤回后阶段比较交付 `blocked` |
 | 权限边界 | 无/错 token 401；区域操作员跨区 403；分析员自批 403；操作员触发全局复制/切换 403；集团分析读取区域原始记录 403；审计员可读区域记录用于审计 |
 
-一次完整运行的实际结果（`make verify`，2026-11-18 在本容器内执行）：
+一次完整运行的实际结果（`make verify`，2026-11-19 在本容器内执行）：
 
 ```
-checks passed: 105, failed: 0
+checks passed: 146, failed: 0
 ALL CHECKS PASSED
 ```
 
@@ -176,7 +203,7 @@ ALL CHECKS PASSED
 
 ## 6. API 一览
 
-完整定义见 `GET /openapi.json`（OpenAPI 3.0.3，34 路径 / 36 操作），交互文档见 `/docs`。
+完整定义见 `GET /openapi.json`（OpenAPI 3.0.3，42 路径），交互文档见 `/docs`。
 
 | 分组 | 接口 |
 | --- | --- |
@@ -185,6 +212,8 @@ ALL CHECKS PASSED
 | 出境申请 | `GET/POST /outbound/requests`、`GET /outbound/requests/{id}`、`POST .../decide`、`POST .../revoke` |
 | 聚合 | `GET/POST /aggregates`、`GET /aggregates/{id}` |
 | 交付 | `POST /aggregates/{id}/deliver`、`GET /deliveries/{id}`、`GET /deliveries/{id}/verify` |
+| 阶段对齐（区域） | `GET/POST /regions/{region}/phenology/evidence`、`GET/POST /regions/{region}/phenology/runs`、`GET /regions/{region}/phenology/runs/{run}` |
+| 阶段对齐（集团） | `GET/POST /phenology/comparisons`、`GET /phenology/comparisons/{id}`、`POST /phenology/comparisons/{id}/deliver`、`GET /phenology/deliveries/{id}`、`GET /phenology/deliveries/{id}/verify` |
 | 容灾 | `GET /dr`、`GET /dr/{region}`、`POST /dr/{region}/failover`、`POST /dr/{region}/failback` |
 | 审计 | `GET /audit`、`GET /audit/verify`、`GET /audit/{subject}` |
 | 演示 | `POST /demo/reset`（`DEMO_MODE=false` 时禁用）、`GET /demo/summary` |
@@ -222,6 +251,52 @@ curl -s localhost:8080/deliveries/$DLV/verify -H 'Authorization: Bearer demo-aud
 curl -s localhost:8080/audit/verify -H 'Authorization: Bearer demo-auditor-token' | jq -c .
 ```
 
+阶段对齐链路（区域证据 → 两种路线推导 → 复制 → 跨半球比较 → 交付 → 验证）：
+
+```bash
+PH=samples/phenology
+for r in de-bb us-ia br-mt fr-nor; do
+  code=$(echo "$r" | tr a-z A-Z)
+  curl -s -XPOST localhost:8080/regions/$code/phenology/evidence \
+    -H "Authorization: Bearer demo-operator-$r" -H 'Content-Type: application/json' \
+    --data-binary @$PH/$r/evidence.json | jq -c '{region,rule_id,counts}'
+done
+
+# 同一 30 播后天数：凉爽 DE-BB 与温暖 US-IA 在 DAS 下一致，在 GDD 下分化
+for spec in "DE-BB de-bb das 2026-05-10" "DE-BB de-bb gdd 2026-05-10" \
+            "US-IA us-ia das 2026-05-15" "US-IA us-ia gdd 2026-05-15"; do
+  set -- $spec
+  curl -s -XPOST localhost:8080/regions/$1/phenology/runs -H "Authorization: Bearer demo-operator-$2" \
+    -H 'Content-Type: application/json' \
+    -d "{\"rule_id\":\"S2026-MAIZE-v1\",\"method\":\"$3\",\"as_of_date\":\"$4\"}" \
+    | jq -c '{method,stages:.summary.stage_areas,pending:.summary.pending_area_ha}'
+done
+# BR-MT 缺样 -> weather_gap_widens_stage 待定、证据范围变宽；FR-NOR 走日历回退
+curl -s -XPOST localhost:8080/regions/BR-MT/phenology/runs -H 'Authorization: Bearer demo-operator-br-mt' \
+  -H 'Content-Type: application/json' -d '{"rule_id":"S2026-MAIZE-v1","method":"gdd","as_of_date":"2026-11-05"}' \
+  | jq -c '{stages:.summary.stage_areas,pending:.summary.pending,pending_evidence:.summary.pending_evidence,coverage:.summary.weather_coverage,reseeded:.summary.reseeded_area_ha}'
+
+# 每个区域补一个比较日的运行，然后复制、比较、交付、验证
+for spec in "DE-BB de-bb 2026-05-20" "US-IA us-ia 2026-05-20" "FR-NOR fr-nor 2026-05-20" "BR-MT br-mt 2026-11-05"; do
+  set -- $spec
+  curl -s -XPOST localhost:8080/regions/$1/phenology/runs -H "Authorization: Bearer demo-operator-$2" \
+    -H 'Content-Type: application/json' -d "{\"rule_id\":\"S2026-MAIZE-v1\",\"method\":\"das\",\"as_of_date\":\"$3\"}" >/dev/null
+done
+curl -s -XPOST localhost:8080/replication/batch -H "$A" -H 'Content-Type: application/json' -d '{}' >/dev/null
+
+AN='Authorization: Bearer demo-analyst-token'; AP='Authorization: Bearer demo-approver-token'; AU='Authorization: Bearer demo-auditor-token'
+APR=$(curl -s -XPOST localhost:8080/outbound/requests -H "$AN" -H 'Content-Type: application/json' \
+  --data-binary @samples/phenology/approvals/phenology-wide.json | jq -r .id)
+curl -s -XPOST localhost:8080/outbound/requests/$APR/decide -H "$AP" -H 'Content-Type: application/json' -d '{"decision":"approved"}' >/dev/null
+CMP=$(curl -s -XPOST localhost:8080/phenology/comparisons -H "$AN" -H 'Content-Type: application/json' \
+  -d "{\"approval_id\":\"$APR\",\"rule_id\":\"S2026-MAIZE-v1\",\"method\":\"das\",\"as_of_date\":\"2026-05-20\",\"region_as_of\":{\"BR-MT\":\"2026-11-05\"}}")
+echo "$CMP" | jq -c '{included:.included_regions,common:.common_stage,comparable:.common_comparable_regions,stage_totals,pending_totals}'
+CID=$(echo "$CMP" | jq -r .id)
+DLV=$(curl -s -XPOST localhost:8080/phenology/comparisons/$CID/deliver -H "$AN")
+echo "$DLV" | jq -c '{status,coords:.artifact.contains_raw_trajectories,pending:.artifact.pending_totals}'
+curl -s localhost:8080/phenology/deliveries/$(echo "$DLV" | jq -r .id)/verify -H "$AU" | jq -c .
+```
+
 ---
 
 ## 8. 配置项
@@ -247,12 +322,14 @@ curl -s localhost:8080/audit/verify -H 'Authorization: Bearer demo-auditor-token
 ```
 cmd/server/            服务入口（含 -healthcheck 子命令，供 distroless 健康检查）
 internal/api/          HTTP 路由、鉴权、OpenAPI 文档、后台复制器
-internal/service/      区域写入/去重、复制、聚合、审批与交付、容灾、审计链
+internal/service/      区域写入/去重、复制、聚合、审批与交付、容灾、审计链、生育阶段推导与比较
 internal/db/           PostgreSQL 连接池（每库一个）、schema、种子、重置
 internal/config/       区域/令牌/连接串配置
+internal/model/        领域模型（phenology.go 为阶段对齐）
 web/swagger-ui/        内置 Swagger UI 资产（离线可用，Apache-2.0，见 LICENSE/NOTICE）
-samples/               多区域、断网补传、重试重叠、切换后续传、不同授权范围
-scripts/               gen_samples.py、replay.sh（断言）、demo.sh（演示）、verify.sh
+samples/               多区域、断网补传、重试重叠、切换后续传、不同授权范围、阶段对齐证据
+samples/phenology/     各区域季节证据、迟到更正样本、阶段比较审批
+scripts/               gen_samples.py、gen_phenology_samples.py、replay.sh（断言）、demo.sh（演示）、verify.sh
 docs/architecture.md   数据流与失败模式说明
 ```
 
@@ -263,3 +340,9 @@ docs/architecture.md   数据流与失败模式说明
 - 驻留政策目前通过种子数据维护（只读 API 暴露），政策变更是治理动作，不在演示界面内修改。
 - DR 是登记册 + 本地主备角色指针的模拟：单进程内切换，不包含真实流复制；但"只从已确认位置续传"的约束是真实执行的。
 - 后台复制默认关闭以确保回放确定性；开启后与回放脚本并行会有竞态（脚本会自行重新复制并断言，通常仍能通过，但不建议）。
+- 阶段对齐是**农艺进度口径**：不做产量预测、不评价团队绩效、不对天气/土壤/管理差异做校正。共同可比区域仅表示
+  "均已到达共同阶段且面积未被判为待定"。
+- GDD 的缺样上界以观测到的日最大累积率 × `missing_day_upper_fraction` 作有界外推，仅用于**扩大证据范围**，绝不回填观测；
+  缺样导致阶段跨越超过 `weather_gap_pending_days` 时面积判为待定。基温/品种阈值来自品种目录，系统不自行估计。
+- 阶段比较在生成时解析各区域"该规则/方法/日期下最新已确认运行"；如需锁定历史依据，用请求体 `region_runs` 指定具体运行，
+  或用 `region_as_of` 为不同半球指定本地等价日期。

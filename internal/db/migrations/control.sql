@@ -246,3 +246,88 @@ create table if not exists audit_events (
   hash         text not null
 );
 create index if not exists audit_events_occurred_idx on audit_events (occurred_at desc);
+
+-- ---------------------------------------------------------------------------
+-- Phenology stage alignment at group level.
+-- The region publishes only its region-granularity stage product (area by
+-- stage, pending range, evidence window). Plot identifiers and geometry never
+-- reach the control plane.
+-- ---------------------------------------------------------------------------
+
+-- Extend the residency category allowlist idempotently for existing installs.
+-- New installs already declare the wider list in the create table above; this
+-- only rewrites an older constraint that predates phenology_stage.
+do $$
+declare
+  def text;
+begin
+  select pg_get_constraintdef(c.oid) into def
+  from pg_constraint c
+  join pg_class t on t.oid = c.conrelid
+  where t.relname = 'residency_policies' and c.contype = 'c'
+    and pg_get_constraintdef(c.oid) like '%raw_trajectory%'
+  limit 1;
+  if def is not null and position('phenology_stage' in def) = 0 then
+    alter table residency_policies drop constraint residency_policies_category_check;
+    alter table residency_policies add constraint residency_policies_category_check
+      check (category in ('raw_trajectory','operation_summary','device_alarm',
+                          'aggregate_metric','phenology_stage'));
+  end if;
+end $$;
+
+create table if not exists replica_phenology_products (
+  source_region  text not null,
+  entity_id      text not null,
+  source_seq     bigint not null,
+  source_epoch   bigint not null default 0,
+  run_id         text not null,
+  rule_id        text not null,
+  method         text not null,
+  as_of_date     date not null,
+  product        jsonb not null,
+  source_node    text not null,
+  status         text not null check (status in ('confirmed','unconfirmed')),
+  copied_at      timestamptz not null default now(),
+  primary key (source_region, entity_id)
+);
+create unique index if not exists replica_phenology_products_run_uidx
+  on replica_phenology_products (source_region, run_id);
+
+create table if not exists phenology_comparisons (
+  id                        text primary key,
+  approval_id               text not null references outbound_requests(id),
+  approval_version          integer not null default 1,
+  rule_id                   text not null,
+  season_id                 text not null,
+  rule_version              text not null,
+  crop                      text not null,
+  method                    text not null check (method in ('das','gdd')),
+  as_of_date                date not null,
+  stage_keys                text[] not null,
+  status                    text not null check (status in ('computed','delivered','blocked')),
+  included_regions          text[] not null default '{}',
+  excluded_regions          text[] not null default '{}',
+  regions                   jsonb not null default '[]'::jsonb,
+  common_stage              text not null default '',
+  common_comparable_regions text[] not null default '{}',
+  stage_totals              jsonb not null default '{}'::jsonb,
+  pending_totals            jsonb not null default '{}'::jsonb,
+  requested_by              text not null,
+  created_at                timestamptz not null default now()
+);
+
+create table if not exists phenology_deliveries (
+  id              text primary key,
+  comparison_id   text not null references phenology_comparisons(id),
+  approval_id     text not null,
+  status          text not null check (status in ('sent','blocked')),
+  channel         text not null default 'secure_store',
+  checks          jsonb not null default '[]'::jsonb,
+  blocked_reason  text,
+  artifact        text,
+  artifact_sha256 text,
+  audit_seq       bigint,
+  requested_by    text not null,
+  created_at      timestamptz not null default now(),
+  sent_at         timestamptz
+);

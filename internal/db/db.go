@@ -177,6 +177,7 @@ func (m *Manager) seedRegistry(ctx context.Context) error {
 			{"operation_summary", true, "allowed: aggregated work record without coordinates"},
 			{"device_alarm", true, "allowed: alarm codes without coordinates"},
 			{"aggregate_metric", true, "allowed: in-region aggregate approved for group reporting"},
+			{"phenology_stage", true, "allowed: region-granularity stage area, pending range and evidence window only"},
 		}
 		for _, row := range rows {
 			if _, err := tx.Exec(ctx, `
@@ -241,7 +242,8 @@ func (m *Manager) Reset(ctx context.Context) error {
 	tables := []string{
 		"deliveries", "aggregate_run_regions", "aggregate_runs", "outbound_requests",
 		"audit_events", "replication_runs", "replica_op_summaries", "replica_trajectories",
-		"replica_alarms", "replica_metrics",
+		"replica_alarms", "replica_metrics", "replica_phenology_products",
+		"phenology_deliveries", "phenology_comparisons",
 	}
 	for _, t := range tables {
 		if _, err := m.control.Exec(ctx, "truncate table "+t+" restart identity cascade"); err != nil {
@@ -265,6 +267,9 @@ func (m *Manager) Reset(ctx context.Context) error {
 		reg, _ := m.cfg.RegionByCode(code)
 		for _, q := range []string{
 			`truncate operation_events, journal_entries, outbox_events, metric_snapshots, ingest_receipts, devices`,
+			`truncate season_rules, phenology_varieties, phenology_plots, sowing_facts, stage_calendars,
+			   weather_stations, station_links, temperature_observations, stage_observations,
+			   phenology_runs, phenology_ingest_receipts`,
 			fmt.Sprintf(`update region_state set local_epoch=1, next_journal_seq=1, next_outbox_seq=1,
 			   active_node=%s, updated_at=now()`, quoteLiteral(reg.PrimaryNode)),
 		} {

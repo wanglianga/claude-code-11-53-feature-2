@@ -72,8 +72,31 @@
 - `detail` 入库前 JSON 归一化（等价于 jsonb 往返后的形态），避免写读差异。
 - 任何行被改写：`prev_hash` 与上一条不符或内容哈希不符 → `/audit/verify` 返回 `valid=false`、`broken_at=<seq>`。
 
-## 3. 权限模型
+## 2.6 生育阶段对齐
 
+```
+区域库（每区独立）                                       控制面库
+  season_rules / phenology_varieties / phenology_plots     replica_phenology_products
+  sowing_facts(rev) / stage_calendars / weather_stations   （区域粒度阶段产品，无田块标识）
+  station_links / temperature_observations(rev)            phenology_comparisons
+  stage_observations / phenology_runs(不可变, 指纹)          phenology_deliveries（原始字节+哈希）
+        │                                                        ▲
+        └─ POST /regions/{r}/phenology/runs 派生 ─ outbox(phenology_stage) ─ 复制（按政策）┘
+```
+
+关键点：
+
+| 约束 | 实现 |
+| --- | --- |
+| 同一季节规则版本绑定全链路 | 所有证据表以 `rule_id` 为键；运行与比较都携带 `season_id/rule_version`；比较跨规则即 `mixed_season_rule` 排除 |
+| 两条可解释路线 | `das`：播种日 + 品种日数阈值（无则回退农艺日历）；`gdd`：温度站累计 GDD（基温+阈值） |
+| 不确定即待定，禁止凑图 | 品种不明/多作物/站不适用/缺气象/缺 GDD 参数/证据矛盾/缺样使阶段跨越 → 计入 `pending`，永不并入阶段 |
+| 补种按分段 | 同地块多播次的每个 `segment` 独立推导，`segmented_plots` 与 `reseeded_area_ha` 显式记录 |
+| 运行不可变 | 每次派生写一条 `phenology_runs` + `evidence_fingerprint`（所读播种事实/气象观测版本）；更正只产生新运行 |
+| 只出区域粒度 | `phenology_stage` 产品仅含面积/待定/证据范围；交付前对确切字节做受限字段扫描；`contains_raw_trajectories=false` |
+| 交付前复核 | `POST /phenology/comparisons/{id}/deliver` 重读审批状态/版本/有效期/区域范围并扫描坐标字段 |
+
+## 3. 权限模型
 | 角色 | 可做 | 不可做 |
 | --- | --- | --- |
 | `region_operator`（绑定单一区域） | 本区域上传、本区域状态/作业/日志校验、本区域复制 | 跨区读写、全局复制、切换、聚合、审批 |

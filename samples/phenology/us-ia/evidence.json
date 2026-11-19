@@ -1,0 +1,649 @@
+{
+  "batch_id": "phenology-us-ia-v1",
+  "rule": {
+    "rule_id": "S2026-MAIZE-v1",
+    "season_id": "2026",
+    "rule_version": "2026.1",
+    "crop": "maize",
+    "hemisphere": "north",
+    "das_tolerance_days": 3,
+    "weather_gap_pending_days": 12,
+    "min_weather_coverage": 0.8,
+    "station_max_distance_km": 40,
+    "station_max_elevation_delta_m": 120,
+    "missing_day_upper_fraction": 0.6,
+    "published_at": "2026-03-01T00:00:00Z",
+    "notes": [
+      "Season rule version 2026.1 binds sowing facts, variety catalog, weather evidence, derivation and group comparison.",
+      "Day thresholds are cumulative days after sowing; GDD thresholds are cumulative growing degree days above the variety base temperature."
+    ]
+  },
+  "varieties": [
+    {
+      "variety_code": "VEARLY",
+      "crop": "maize",
+      "maturity_group": "early",
+      "das_thresholds": {
+        "emergence": 8,
+        "vegetative": 40,
+        "harvest_prep": 120
+      },
+      "gdd": {
+        "base_temp_c": 10.0,
+        "thresholds": {
+          "emergence": 120,
+          "vegetative": 250,
+          "harvest_prep": 900
+        }
+      }
+    },
+    {
+      "variety_code": "VLATE",
+      "crop": "maize",
+      "maturity_group": "late",
+      "das_thresholds": {
+        "emergence": 10,
+        "vegetative": 60,
+        "harvest_prep": 150
+      },
+      "gdd": {
+        "base_temp_c": 10.0,
+        "thresholds": {
+          "emergence": 140,
+          "vegetative": 820,
+          "harvest_prep": 1750
+        }
+      }
+    }
+  ],
+  "plots": [
+    {
+      "plot_id": "IA-F-21",
+      "crop": "maize",
+      "declared_area_ha": 130.0,
+      "note": ""
+    },
+    {
+      "plot_id": "IA-F-22",
+      "crop": "maize",
+      "declared_area_ha": 90.0,
+      "note": ""
+    },
+    {
+      "plot_id": "IA-F-23",
+      "crop": "maize",
+      "declared_area_ha": 110.0,
+      "note": ""
+    }
+  ],
+  "sowing_facts": [
+    {
+      "fact_id": "IA-F-21#1",
+      "plot_id": "IA-F-21",
+      "segment_no": 1,
+      "crop": "maize",
+      "variety_code": "VEARLY",
+      "sown_on": "2026-04-15",
+      "area_ha": 130.0,
+      "event_type": "initial",
+      "evidence_ref": "seed-ticket",
+      "recorded_at": "2026-04-02T08:00:00Z",
+      "revision": 1,
+      "status": "active"
+    },
+    {
+      "fact_id": "IA-F-22#1",
+      "plot_id": "IA-F-22",
+      "segment_no": 1,
+      "crop": "maize",
+      "variety_code": "VEARLY",
+      "sown_on": "2026-04-15",
+      "area_ha": 90.0,
+      "event_type": "initial",
+      "evidence_ref": "seed-ticket",
+      "recorded_at": "2026-04-02T08:00:00Z",
+      "revision": 1,
+      "status": "active"
+    },
+    {
+      "fact_id": "IA-F-23#1",
+      "plot_id": "IA-F-23",
+      "segment_no": 1,
+      "crop": "maize",
+      "variety_code": "VLATE",
+      "sown_on": "2026-04-18",
+      "area_ha": 110.0,
+      "event_type": "initial",
+      "evidence_ref": "seed-ticket",
+      "recorded_at": "2026-04-02T08:00:00Z",
+      "revision": 1,
+      "status": "active"
+    }
+  ],
+  "stage_calendars": [],
+  "stations": [
+    {
+      "station_id": "US-WX1",
+      "label": "US primary",
+      "elevation_m": 300
+    }
+  ],
+  "station_links": [
+    {
+      "plot_id": "IA-F-21",
+      "station_id": "US-WX1",
+      "distance_km": 10.0,
+      "elevation_delta_m": 5.0
+    },
+    {
+      "plot_id": "IA-F-22",
+      "station_id": "US-WX1",
+      "distance_km": 95.0,
+      "elevation_delta_m": 260.0
+    },
+    {
+      "plot_id": "IA-F-23",
+      "station_id": "US-WX1",
+      "distance_km": 14.0,
+      "elevation_delta_m": 6.0
+    }
+  ],
+  "temperature_observations": [
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-15",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-16",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-17",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-18",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-19",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-20",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-21",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-22",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-23",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-24",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-25",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-26",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-27",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-28",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-29",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-04-30",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-01",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-02",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-03",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-04",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-05",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-06",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-07",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-08",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-09",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-10",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-11",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-12",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-13",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-14",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-15",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-16",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-17",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-18",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-19",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-20",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-21",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-22",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-23",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-24",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-25",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-26",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-27",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-28",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-29",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-30",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-05-31",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-01",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-02",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-03",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-04",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-05",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-06",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-07",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    },
+    {
+      "station_id": "US-WX1",
+      "obs_date": "2026-06-08",
+      "tmin_c": 12,
+      "tmax_c": 26,
+      "source": "region-weather-feed",
+      "revision": 1,
+      "recorded_at": "2026-04-30T00:00:00Z"
+    }
+  ],
+  "stage_observations": []
+}

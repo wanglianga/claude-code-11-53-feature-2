@@ -1,0 +1,16 @@
+{
+  "purpose": "Cross-hemisphere maize stage alignment review",
+  "recipient": "group-agronomy@example.org",
+  "scope_regions": [
+    "BR-MT",
+    "DE-BB",
+    "FR-NOR",
+    "US-IA"
+  ],
+  "scope_metrics": [
+    "area_ha",
+    "operation_count",
+    "completion_rate"
+  ],
+  "valid_until": "2026-12-31T23:59:59Z"
+}

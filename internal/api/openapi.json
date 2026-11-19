@@ -51,6 +51,14 @@
     {
       "name": "Demo",
       "description": "演示环境辅助接口"
+    },
+    {
+      "name": "Phenology",
+      "description": "作物生育阶段对齐：区域内证据、阶段推导、集团阶段比较（仅区域粒度面积，不含田块）"
+    },
+    {
+      "name": "Phenology Delivery",
+      "description": "阶段比较结果交付前复核与审计证明"
     }
   ],
   "security": [
@@ -1243,6 +1251,1030 @@
           "head_seq": {
             "type": "integer",
             "format": "int64"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SeasonRule": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "type": "string"
+          },
+          "season_id": {
+            "type": "string"
+          },
+          "rule_version": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "hemisphere": {
+            "type": "string",
+            "enum": [
+              "north",
+              "south"
+            ]
+          },
+          "das_tolerance_days": {
+            "type": "integer"
+          },
+          "weather_gap_pending_days": {
+            "type": "integer"
+          },
+          "min_weather_coverage": {
+            "type": "number"
+          },
+          "station_max_distance_km": {
+            "type": "number"
+          },
+          "station_max_elevation_delta_m": {
+            "type": "number"
+          },
+          "missing_day_upper_fraction": {
+            "type": "number"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "rule_id",
+          "season_id",
+          "rule_version",
+          "crop",
+          "hemisphere"
+        ]
+      },
+      "Variety": {
+        "type": "object",
+        "properties": {
+          "variety_code": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "maturity_group": {
+            "type": "string"
+          },
+          "das_thresholds": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "gdd": {
+            "type": "object",
+            "properties": {
+              "base_temp_c": {
+                "type": "number"
+              },
+              "thresholds": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "variety_code",
+          "crop"
+        ]
+      },
+      "Plot": {
+        "type": "object",
+        "properties": {
+          "plot_id": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "declared_area_ha": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plot_id",
+          "crop",
+          "declared_area_ha"
+        ]
+      },
+      "SowingFact": {
+        "type": "object",
+        "properties": {
+          "fact_id": {
+            "type": "string"
+          },
+          "plot_id": {
+            "type": "string"
+          },
+          "segment_no": {
+            "type": "integer"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "variety_code": {
+            "type": "string"
+          },
+          "sown_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "area_ha": {
+            "type": "number"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "reseed"
+            ]
+          },
+          "evidence_ref": {
+            "type": "string"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "superseded",
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "fact_id",
+          "plot_id",
+          "crop",
+          "sown_on",
+          "area_ha",
+          "event_type",
+          "revision"
+        ]
+      },
+      "StageCalendar": {
+        "type": "object",
+        "properties": {
+          "calendar_id": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "variety_code": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "emergence",
+              "vegetative",
+              "harvest_prep"
+            ]
+          },
+          "start_day": {
+            "type": "integer"
+          },
+          "end_day": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "calendar_id",
+          "crop",
+          "stage",
+          "start_day"
+        ]
+      },
+      "WeatherStation": {
+        "type": "object",
+        "properties": {
+          "station_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "elevation_m": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "station_id"
+        ]
+      },
+      "StationLink": {
+        "type": "object",
+        "properties": {
+          "plot_id": {
+            "type": "string"
+          },
+          "station_id": {
+            "type": "string"
+          },
+          "distance_km": {
+            "type": "number"
+          },
+          "elevation_delta_m": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "plot_id",
+          "station_id"
+        ]
+      },
+      "TemperatureObservation": {
+        "type": "object",
+        "properties": {
+          "station_id": {
+            "type": "string"
+          },
+          "obs_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "tmin_c": {
+            "type": "number"
+          },
+          "tmax_c": {
+            "type": "number"
+          },
+          "source": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "station_id",
+          "obs_date",
+          "tmin_c",
+          "tmax_c",
+          "revision"
+        ]
+      },
+      "StageObservation": {
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string"
+          },
+          "plot_id": {
+            "type": "string"
+          },
+          "segment_no": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "emergence",
+              "vegetative",
+              "harvest_prep"
+            ]
+          },
+          "observed_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "observation_id",
+          "plot_id",
+          "stage"
+        ]
+      },
+      "PhenologyEvidence": {
+        "type": "object",
+        "properties": {
+          "batch_id": {
+            "type": "string"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/SeasonRule"
+          },
+          "varieties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Variety"
+            }
+          },
+          "plots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Plot"
+            }
+          },
+          "sowing_facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SowingFact"
+            }
+          },
+          "stage_calendars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StageCalendar"
+            }
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeatherStation"
+            }
+          },
+          "station_links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StationLink"
+            }
+          },
+          "temperature_observations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemperatureObservation"
+            }
+          },
+          "stage_observations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StageObservation"
+            }
+          }
+        },
+        "required": [
+          "batch_id",
+          "rule"
+        ]
+      },
+      "PhenologyIngestResult": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "replayed_batch": {
+            "type": "boolean"
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "PhenologyEvidenceSummary": {
+        "type": "object",
+        "properties": {
+          "region_code": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "rule_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "plots": {
+            "type": "integer"
+          },
+          "active_sowing_facts": {
+            "type": "integer"
+          },
+          "varieties": {
+            "type": "integer"
+          },
+          "stage_calendars": {
+            "type": "integer"
+          },
+          "weather_stations": {
+            "type": "integer"
+          },
+          "station_links": {
+            "type": "integer"
+          },
+          "temperature_observations": {
+            "type": "integer"
+          },
+          "stage_observations": {
+            "type": "integer"
+          },
+          "phenology_runs": {
+            "type": "integer"
+          }
+        }
+      },
+      "PhenologyRunRequest": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "das",
+              "gdd"
+            ]
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "method",
+          "as_of_date"
+        ]
+      },
+      "PendingArea": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "area_ha": {
+            "type": "number"
+          },
+          "segments": {
+            "type": "integer"
+          }
+        }
+      },
+      "EvidenceRange": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "emergence",
+              "vegetative",
+              "harvest_prep"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "PhenologyRunSummary": {
+        "type": "object",
+        "properties": {
+          "sown_area_ha": {
+            "type": "number"
+          },
+          "stage_areas": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "pre_emergence_area_ha": {
+            "type": "number"
+          },
+          "pending_area_ha": {
+            "type": "number"
+          },
+          "pending": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingArea"
+            }
+          },
+          "evidence_ranges": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EvidenceRange"
+            }
+          },
+          "pending_evidence": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EvidenceRange"
+            }
+          },
+          "weather_coverage": {
+            "type": "number"
+          },
+          "segmented_plots": {
+            "type": "integer"
+          },
+          "reseeded_area_ha": {
+            "type": "number"
+          },
+          "calendar_used": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PlotSegment": {
+        "type": "object",
+        "properties": {
+          "plot_id": {
+            "type": "string"
+          },
+          "segment_no": {
+            "type": "integer"
+          },
+          "fact_id": {
+            "type": "string"
+          },
+          "fact_revision": {
+            "type": "integer"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "variety_code": {
+            "type": "string"
+          },
+          "area_ha": {
+            "type": "number"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "sown_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "classified",
+              "pending"
+            ]
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "emergence",
+              "vegetative",
+              "harvest_prep"
+            ]
+          },
+          "pending_reason": {
+            "type": "string"
+          },
+          "das_days": {
+            "type": "integer"
+          },
+          "gdd_lower": {
+            "type": "number"
+          },
+          "gdd_upper": {
+            "type": "number"
+          },
+          "weather_coverage": {
+            "type": "number"
+          },
+          "station_id": {
+            "type": "string"
+          },
+          "onset_from": {
+            "type": "string",
+            "format": "date"
+          },
+          "onset_to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "PhenologyRun": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "region_code": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "season_id": {
+            "type": "string"
+          },
+          "rule_version": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "das",
+              "gdd"
+            ]
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial",
+              "pending_all",
+              "empty"
+            ]
+          },
+          "evidence_fingerprint": {
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PhenologyRunSummary"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlotSegment"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PhenologyComparisonRequest": {
+        "type": "object",
+        "properties": {
+          "approval_id": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "das",
+              "gdd"
+            ]
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "stage_keys": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "emergence",
+                "vegetative",
+                "harvest_prep"
+              ]
+            }
+          },
+          "region_runs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "region_as_of": {
+            "type": "object",
+            "description": "按区域本地等价日期比较（跨半球）",
+            "additionalProperties": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        },
+        "required": [
+          "approval_id",
+          "rule_id",
+          "method",
+          "as_of_date"
+        ]
+      },
+      "ComparisonRegion": {
+        "type": "object",
+        "properties": {
+          "region_code": {
+            "type": "string"
+          },
+          "included": {
+            "type": "boolean"
+          },
+          "exclusion_reason": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "replication_seq": {
+            "type": "integer"
+          },
+          "sown_area_ha": {
+            "type": "number"
+          },
+          "stage_areas": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "pre_emergence_area_ha": {
+            "type": "number"
+          },
+          "pending_area_ha": {
+            "type": "number"
+          },
+          "pending": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "evidence_ranges": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EvidenceRange"
+            }
+          },
+          "pending_evidence": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EvidenceRange"
+            }
+          },
+          "weather_coverage": {
+            "type": "number"
+          },
+          "furthest_stage": {
+            "type": "string",
+            "enum": [
+              "emergence",
+              "vegetative",
+              "harvest_prep"
+            ]
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "PhenologyDelivery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "comparison_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "blocked"
+            ]
+          },
+          "channel": {
+            "type": "string"
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Check"
+            }
+          },
+          "blocked_reason": {
+            "type": "string"
+          },
+          "artifact": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "artifact_sha256": {
+            "type": "string"
+          },
+          "audit_seq": {
+            "type": "integer"
+          },
+          "requested_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "PhenologyComparison": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "approval_id": {
+            "type": "string"
+          },
+          "approval_version": {
+            "type": "integer"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "season_id": {
+            "type": "string"
+          },
+          "rule_version": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "stage_keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "included_regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excluded_regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparisonRegion"
+            }
+          },
+          "common_stage": {
+            "type": "string",
+            "enum": [
+              "emergence",
+              "vegetative",
+              "harvest_prep"
+            ]
+          },
+          "common_comparable_regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stage_totals": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "pending_totals": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "disclaimer": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requested_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/PhenologyDelivery"
+          }
+        }
+      },
+      "PhenologyDeliveryVerification": {
+        "type": "object",
+        "properties": {
+          "delivery_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "recomputed_sha256": {
+            "type": "string"
+          },
+          "recorded_sha256": {
+            "type": "string"
+          },
+          "sha256_matches": {
+            "type": "boolean"
+          },
+          "restricted_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "audit_entry_valid": {
+            "type": "boolean"
+          },
+          "audit_chain_valid": {
+            "type": "boolean"
+          },
+          "artifact_bytes": {
+            "type": "integer"
           },
           "verified_at": {
             "type": "string",
@@ -2649,6 +3681,503 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/regions/{region}/phenology/evidence": {
+      "get": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "查看本区域某季节规则的证据计数（本地）",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Region"
+          },
+          {
+            "name": "rule_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "证据计数",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyEvidenceSummary"
+                }
+              }
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "上传阶段证据（作物/品种/播种事实/日历/气象观测及覆盖），按规则版本绑定",
+        "description": "同一 batch_id 内容相同返回原回执；播种事实与温度观测按 revision 版本化，更高 revision 使旧版本 superseded；历史阶段运行不被改写。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Region"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhenologyEvidence"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "已接收",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyIngestResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "400": {
+              "$ref": "#/components/responses/BadRequest"
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          },
+          "409": {
+            "409": {
+              "$ref": "#/components/responses/Conflict"
+            }
+          }
+        }
+      }
+    },
+    "/regions/{region}/phenology/runs": {
+      "get": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "列出本区域的阶段运行（倒序）",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Region"
+          },
+          {
+            "name": "rule_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "method",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "das",
+                "gdd"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "运行列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "region": {
+                      "type": "string"
+                    },
+                    "runs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PhenologyRun"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "按指定方法签发一个新的不可变阶段运行",
+        "description": "das：已确认播种日 + 品种声明的日数阈值（或农艺日历）推导；gdd：区域内气象观测累计生长度日推导，缺样扩大证据范围。两种路线都只读取当季有效证据；迟到播种或气象修订只产生新运行。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Region"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhenologyRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "运行结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "400": {
+              "$ref": "#/components/responses/BadRequest"
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          },
+          "404": {
+            "404": {
+              "$ref": "#/components/responses/NotFound"
+            }
+          }
+        }
+      }
+    },
+    "/regions/{region}/phenology/runs/{run}": {
+      "get": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "读取一次阶段运行（含本地地块分段明细，不出境）",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Region"
+          },
+          {
+            "name": "run",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "运行详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyRun"
+                }
+              }
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          },
+          "404": {
+            "404": {
+              "$ref": "#/components/responses/NotFound"
+            }
+          }
+        }
+      }
+    },
+    "/phenology/comparisons": {
+      "get": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "列出阶段比较运行",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "comparisons": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PhenologyComparison"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "按共同阶段比较各区域作业推进（集团分析）",
+        "description": "只用已确认的区域阶段产品；同一 rule_id/season/rule_version 下对齐。输出已播面积、各阶段面积、待定面积与证据范围、共同可比区域。不评价团队绩效、不预测产量。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhenologyComparisonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "比较结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyComparison"
+                }
+              }
+            }
+          },
+          "400": {
+            "400": {
+              "$ref": "#/components/responses/BadRequest"
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          },
+          "404": {
+            "404": {
+              "$ref": "#/components/responses/NotFound"
+            }
+          }
+        }
+      }
+    },
+    "/phenology/comparisons/{id}": {
+      "get": {
+        "tags": [
+          "Phenology"
+        ],
+        "summary": "读取一次阶段比较",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "比较详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyComparison"
+                }
+              }
+            }
+          },
+          "404": {
+            "404": {
+              "$ref": "#/components/responses/NotFound"
+            }
+          }
+        }
+      }
+    },
+    "/phenology/comparisons/{id}/deliver": {
+      "post": {
+        "tags": [
+          "Phenology Delivery"
+        ],
+        "summary": "交付前复核审批并导出阶段比较（集团分析）",
+        "description": "发送前重新读取当前审批（状态/版本/有效期/区域范围）并对确切字节做受限字段扫描；任一失败则 blocked，artifact=null。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyDelivery"
+                }
+              }
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          },
+          "404": {
+            "404": {
+              "$ref": "#/components/responses/NotFound"
+            }
+          },
+          "409": {
+            "description": "被阻断或已交付",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyDelivery"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/phenology/deliveries/{id}": {
+      "get": {
+        "tags": [
+          "Phenology Delivery"
+        ],
+        "summary": "读取阶段比较交付记录",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "交付记录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyDelivery"
+                }
+              }
+            }
+          },
+          "404": {
+            "404": {
+              "$ref": "#/components/responses/NotFound"
+            }
+          }
+        }
+      }
+    },
+    "/phenology/deliveries/{id}/verify": {
+      "get": {
+        "tags": [
+          "Phenology Delivery"
+        ],
+        "summary": "复核阶段比较交付：字节哈希、受限字段与审计条目",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "复核通过",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyDeliveryVerification"
+                }
+              }
+            }
+          },
+          "403": {
+            "403": {
+              "$ref": "#/components/responses/Forbidden"
+            }
+          },
+          "404": {
+            "404": {
+              "$ref": "#/components/responses/NotFound"
+            }
+          },
+          "409": {
+            "description": "复核不通过",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhenologyDeliveryVerification"
                 }
               }
             }

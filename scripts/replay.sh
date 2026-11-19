@@ -384,6 +384,166 @@ check "audit chain verifies" "$(jq -r .audit_chain_valid "$TMP/verify.json")" "t
 check "group audit ledger verifies end to end" \
   "$(api GET /audit/verify "$TOK_AUDITOR" | jq -r .valid)" "true"
 
+section "6. phenology stage alignment (days-after-sowing vs growing degree days)"
+PH="$S/phenology"
+ph_run() { # region operator method as_of
+  api POST "/regions/$1/phenology/runs" "$2" \
+    "{\"rule_id\":\"S2026-MAIZE-v1\",\"method\":\"$3\",\"as_of_date\":\"$4\"}"
+}
+for r in de-bb us-ia br-mt fr-nor; do
+  code=$(slug "$r")
+  res=$(api POST "/regions/$code/phenology/evidence" "demo-operator-$r" "@$PH/$r/evidence.json")
+  echo "$res" > "$TMP/ph-ev-$r.json"
+  check "phenology evidence accepted for $code" "$(jq -r .replayed_batch "$TMP/ph-ev-$r.json")" "false"
+  check "phenology evidence binds rule version for $code" "$(jq -r .rule_id "$TMP/ph-ev-$r.json")" "S2026-MAIZE-v1"
+done
+
+# Same rule version, both routes, four regions. DE-BB and US-IA are compared at
+# 30 days after sowing; DE-BB's cool spring and US-IA's warm spring diverge
+# under GDD but agree under DAS.
+ph_run DE-BB "demo-operator-de-bb" das 2026-05-10 > "$TMP/ph-de-das-30.json"
+ph_run DE-BB "demo-operator-de-bb" gdd 2026-05-10 > "$TMP/ph-de-gdd-30.json"
+ph_run US-IA "demo-operator-us-ia" das 2026-05-15 > "$TMP/ph-us-das-30.json"
+ph_run US-IA "demo-operator-us-ia" gdd 2026-05-15 > "$TMP/ph-us-gdd-30.json"
+check "DE-BB and US-IA both at 30 DAS agree under day thresholds" \
+  "$(jq -r '.summary.stage_areas.emergence' "$TMP/ph-de-das-30.json")/$(jq -r '.summary.stage_areas.emergence' "$TMP/ph-us-das-30.json")" \
+  "220/330"
+check "same 30 DAS, cooler DE-BB reaches only emergence by GDD" \
+  "$(jq -r '(.summary.stage_areas.vegetative // 0)' "$TMP/ph-de-gdd-30.json")" "0"
+check "same 30 DAS, warmer US-IA reaches vegetative by GDD" \
+  "$(jq -r '.summary.stage_areas.vegetative' "$TMP/ph-us-gdd-30.json")" "130"
+# Area must reconcile: sown == sum(stage areas) + pending + pre-emergence.
+check "stage/pending/pre-emergence areas reconcile to sown area" \
+  "$(jq -r '(.summary.sown_area_ha) as $s | (([.summary.stage_areas[]]|add // 0) + .summary.pending_area_ha + .summary.pre_emergence_area_ha) as $a | ($s == $a)' "$TMP/ph-de-das-30.json")" "true"
+
+# The rocking plot must be segmented; the reseed adds area rather than hiding it.
+ph_run BR-MT "demo-operator-br-mt" das 2026-11-05 > "$TMP/ph-br-das.json"
+check "reseeded plot is reported as a segmented plot" \
+  "$(jq -r '.summary.segmented_plots' "$TMP/ph-br-das.json")" "1"
+check "reseeded area is surfaced, not merged away" \
+  "$(jq -r '.summary.reseeded_area_ha' "$TMP/ph-br-das.json")" "100"
+
+# A weather gap makes the GDD crossing genuinely uncertain: the area is pending
+# with a wide evidence range, never forced into a stage.
+ph_run BR-MT "demo-operator-br-mt" gdd 2026-11-05 > "$TMP/ph-br-gdd.json"
+check "BR-MT GDD weather gap leaves area pending" \
+  "$(jq -r '.summary.pending[0].reason' "$TMP/ph-br-gdd.json")" "weather_gap_widens_stage"
+check "BR-MT pending evidence range is wide" \
+  "$(jq -r '.summary.pending_evidence.emergence.from' "$TMP/ph-br-gdd.json")" "2026-10-10"
+check "BR-MT weather coverage is reported below 1" \
+  "$(jq -r '.summary.weather_coverage < 0.7' "$TMP/ph-br-gdd.json")" "true"
+
+# A weather station that is too far / too high makes the plot pending.
+ph_run US-IA "demo-operator-us-ia" gdd 2026-05-20 > "$TMP/ph-us-gdd-20.json"
+check "out-of-range station link makes area pending" \
+  "$(jq -r '[.summary.pending[]|select(.reason=="station_distance_or_height_not_applicable")]|length' "$TMP/ph-us-gdd-20.json")" "1"
+
+# Variety with no thresholds falls back to the published calendar for DAS and
+# is pending for GDD.
+ph_run FR-NOR "demo-operator-fr-nor" das 2026-05-20 > "$TMP/ph-fr-das.json"
+check "calendar fallback used when variety declares no day thresholds" \
+  "$(jq -r '.summary.calendar_used' "$TMP/ph-fr-das.json")" "true"
+# A scouting note that contradicts the day-threshold stage leaves the plot
+# pending rather than trusting either source.
+check "contradictory stage evidence leaves area pending" \
+  "$(jq -r '[.summary.pending[]|select(.reason=="stage_evidence_conflict")]|length' "$TMP/ph-fr-das.json")" "1"
+
+# Immutability: a later correction (higher-revision sowing fact + weather
+# revision) must not rewrite the run already issued above.
+old_run=$(jq -r .run_id "$TMP/ph-de-das-30.json")
+old_fp=$(jq -r .evidence_fingerprint "$TMP/ph-de-das-30.json")
+# Capture a GDD run before the weather revision too.
+ph_run DE-BB "demo-operator-de-bb" gdd 2026-05-20 > "$TMP/ph-de-gdd-before.json"
+old_gdd_run=$(jq -r .run_id "$TMP/ph-de-gdd-before.json")
+old_gdd_fp=$(jq -r .evidence_fingerprint "$TMP/ph-de-gdd-before.json")
+api POST /regions/DE-BB/phenology/evidence "demo-operator-de-bb" "@$PH/de-bb/correction-v2.json" >/dev/null
+ph_run DE-BB "demo-operator-de-bb" das 2026-05-10 > "$TMP/ph-de-das-corrected.json"
+check "corrected evidence produces a new run" \
+  "$(jq -r '.run_id != "'"$old_run"'"' "$TMP/ph-de-das-corrected.json")" "true"
+check "corrected run has a different evidence fingerprint" \
+  "$(jq -r '.evidence_fingerprint != "'"$old_fp"'"' "$TMP/ph-de-das-corrected.json")" "true"
+check "the historical run is unchanged after the correction" \
+  "$(api GET "/regions/DE-BB/phenology/runs/$old_run" \
+      "$TOK_AUDITOR" | jq -r .evidence_fingerprint)" "$old_fp"
+# A weather revision changes the GDD evidence fingerprint of a NEW run but not
+# of the run that already read the old revision.
+ph_run DE-BB "demo-operator-de-bb" gdd 2026-05-20 > "$TMP/ph-de-gdd-after.json"
+check "weather revision changes the next GDD run's fingerprint" \
+  "$(jq -r '.evidence_fingerprint != "'"$old_gdd_fp"'"' "$TMP/ph-de-gdd-after.json")" "true"
+check "the historical GDD run still reports its original fingerprint" \
+  "$(api GET "/regions/DE-BB/phenology/runs/$old_gdd_run" \
+      "$TOK_AUDITOR" | jq -r .evidence_fingerprint)" "$old_gdd_fp"
+
+# Replicate stage products to the group plane (region granularity only).
+# Ensure each region has a DAS run at the comparison date first, then replicate
+# so every region's product is confirmed for comparison.
+ph_run DE-BB "demo-operator-de-bb" das 2026-05-20 > "$TMP/ph-de-das-20.json"
+ph_run US-IA "demo-operator-us-ia" das 2026-05-20 > "$TMP/ph-us-das-20.json"
+ph_run FR-NOR "demo-operator-fr-nor" das 2026-05-20 > "$TMP/ph-fr-das-20.json"
+api POST /replication/batch "$TOK_ADMIN" '{}' > "$TMP/ph-repl.json"
+check "stage products replicated from every region" \
+  "$(jq -r '[.runs[]|select(.copied_by_category.phenology_stage>0)]|length' "$TMP/ph-repl.json")" "4"
+
+# Group comparison across hemispheres at each region's local equivalent date.
+aprph=$(api POST /outbound/requests "$TOK_ANALYST" "@$PH/approvals/phenology-wide.json" | jq -r .id)
+api POST "/outbound/requests/$aprph/decide" "$TOK_APPROVER" '{"decision":"approved"}' >/dev/null
+cmpbody=$(jq -n --arg a "$aprph" '{approval_id:$a,rule_id:"S2026-MAIZE-v1",method:"das",
+  as_of_date:"2026-05-20",region_as_of:{"BR-MT":"2026-11-05"},
+  stage_keys:["emergence","vegetative","harvest_prep"]}')
+phcmp=$(api POST /phenology/comparisons "$TOK_ANALYST" "$cmpbody")
+echo "$phcmp" > "$TMP/ph-cmp.json"
+phcmpid=$(jq -r .id "$TMP/ph-cmp.json")
+check "comparison aligns all four regions across hemispheres" \
+  "$(jq -r '.included_regions|sort|join(",")' "$TMP/ph-cmp.json")" "BR-MT,DE-BB,FR-NOR,US-IA"
+check "comparison reports a common comparable stage" \
+  "$(jq -r '.common_stage' "$TMP/ph-cmp.json")" "emergence"
+check "comparison never includes excluded plot identifiers" \
+  "$(jq -r '[.regions[]|has("plot_id")]|any' "$TMP/ph-cmp.json")" "false"
+check "comparison carries the agronomic-progress disclaimer" \
+  "$(jq -r '[.disclaimer[]|select(test("does not rate team performance"))]|length>0' "$TMP/ph-cmp.json")" "true"
+
+# A region with no confirmed run for the requested date is listed, not dropped.
+missing_body=$(jq -n --arg a "$aprph" '{approval_id:$a,rule_id:"S2026-MAIZE-v1",method:"dinvalid",
+  as_of_date:"2026-05-20"}')
+check "an invalid comparison method is refused" \
+  "$(api POST /phenology/comparisons "$TOK_ANALYST" "$missing_body" | jq -r .error.code)" "invalid_request"
+
+# Delivery re-validates the approval, scans the exact bytes, and is auditable.
+phdlv=$(api POST "/phenology/comparisons/$phcmpid/deliver" "$TOK_ANALYST")
+echo "$phdlv" > "$TMP/ph-dlv.json"
+check "phenology comparison delivered" "$(jq -r .status "$TMP/ph-dlv.json")" "sent"
+check "phenology artifact carries no raw coordinates" \
+  "$(jq -r '.artifact.contains_raw_trajectories' "$TMP/ph-dlv.json")" "false"
+check "phenology artifact reports pending totals separately" \
+  "$(jq -r '.artifact.pending_totals|length>0' "$TMP/ph-dlv.json")" "true"
+phdlvid=$(jq -r .id "$TMP/ph-dlv.json")
+phver=$(api GET "/phenology/deliveries/$phdlvid/verify" "$TOK_AUDITOR")
+echo "$phver" > "$TMP/ph-ver.json"
+check "phenology artifact re-hashes to the recorded digest" \
+  "$(jq -r .sha256_matches "$TMP/ph-ver.json")" "true"
+check "phenology artifact has no restricted fields" \
+  "$(jq -r '(.restricted_fields // [])|length' "$TMP/ph-ver.json")" "0"
+check "phenology delivery audit entry is bound to the digest" \
+  "$(jq -r .audit_entry_valid "$TMP/ph-ver.json")" "true"
+check "phenology delivery sits on a valid audit chain" \
+  "$(jq -r .audit_chain_valid "$TMP/ph-ver.json")" "true"
+
+# Revocation between comparison and delivery blocks the phenology delivery too.
+aprph2=$(api POST /outbound/requests "$TOK_ANALYST" "@$PH/approvals/phenology-wide.json" | jq -r .id)
+api POST "/outbound/requests/$aprph2/decide" "$TOK_APPROVER" '{"decision":"approved"}' >/dev/null
+cmp2=$(api POST /phenology/comparisons "$TOK_ANALYST" \
+  "$(jq --arg a "$aprph2" '.approval_id=$a' <<<"$cmpbody")" | jq -r .id)
+api POST "/outbound/requests/$aprph2/revoke" "$TOK_APPROVER" '{"reason":"steward withdrew stage-comparison authorization"}' >/dev/null
+phblk=$(api POST "/phenology/comparisons/$cmp2/deliver" "$TOK_ANALYST")
+echo "$phblk" > "$TMP/ph-blocked.json"
+check "revoked approval blocks the phenology delivery" "$(jq -r .status "$TMP/ph-blocked.json")" "blocked"
+check "blocked phenology delivery exports no artifact" "$(jq -r '.artifact' "$TMP/ph-blocked.json")" "null"
+
+# Raw trajectories still never leave the restricted regions after all of this.
+stats=$(api GET /replication/replicas "$TOK_ADMIN")
+check "stage totals did not smuggle raw trajectories out of restricted regions" \
+  "$(jq -r '[(.raw_trajectories_by_region["DE-BB"] // 0),(.raw_trajectories_by_region["BR-MT"] // 0),(.raw_trajectories_by_region["FR-NOR"] // 0)]|add' <<<"$stats")" "0"
+
 # Out-of-band tampering with the ledger must be detected.
 sql_control "update audit_events set detail=jsonb_set(detail,'{included_regions}','[\"XX-XX\"]') where seq=1" >/dev/null
 tampered=$(api GET /audit/verify "$TOK_AUDITOR")

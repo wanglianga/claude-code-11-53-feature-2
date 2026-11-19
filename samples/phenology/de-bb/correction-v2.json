@@ -1,0 +1,54 @@
+{
+  "batch_id": "phenology-de-bb-correction-v2",
+  "rule": {
+    "rule_id": "S2026-MAIZE-v1",
+    "season_id": "2026",
+    "rule_version": "2026.1",
+    "crop": "maize",
+    "hemisphere": "north",
+    "das_tolerance_days": 3,
+    "weather_gap_pending_days": 12,
+    "min_weather_coverage": 0.8,
+    "station_max_distance_km": 40,
+    "station_max_elevation_delta_m": 120,
+    "missing_day_upper_fraction": 0.6,
+    "published_at": "2026-03-01T00:00:00Z",
+    "notes": [
+      "Season rule version 2026.1 binds sowing facts, variety catalog, weather evidence, derivation and group comparison.",
+      "Day thresholds are cumulative days after sowing; GDD thresholds are cumulative growing degree days above the variety base temperature."
+    ]
+  },
+  "varieties": [],
+  "plots": [],
+  "sowing_facts": [
+    {
+      "fact_id": "BB-F-03#1",
+      "plot_id": "BB-F-03",
+      "segment_no": 1,
+      "crop": "maize",
+      "variety_code": "VLATE",
+      "sown_on": "2026-04-18",
+      "area_ha": 100.0,
+      "event_type": "initial",
+      "evidence_ref": "corrected-planting-log",
+      "recorded_at": "2026-05-20T09:00:00Z",
+      "revision": 2,
+      "status": "active"
+    }
+  ],
+  "stage_calendars": [],
+  "stations": [],
+  "station_links": [],
+  "temperature_observations": [
+    {
+      "station_id": "DE-WX1",
+      "obs_date": "2026-04-20",
+      "tmin_c": 12,
+      "tmax_c": 24,
+      "source": "corrected-feed",
+      "revision": 2,
+      "recorded_at": "2026-05-20T09:05:00Z"
+    }
+  ],
+  "stage_observations": []
+}

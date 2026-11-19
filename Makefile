@@ -24,6 +24,7 @@ test: ## unit + integration tests
 
 samples: ## regenerate sample payloads
 	python3 scripts/gen_samples.py
+	python3 scripts/gen_phenology_samples.py
 
 replay: ## run the acceptance replay against BASE
 	./scripts/replay.sh $(BASE)
